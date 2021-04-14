@@ -11,20 +11,11 @@
 const char *ssid = "VAN24";
 const char *password = "vectraPawla24";
 
-int gpio_13_led = 13;
-int gpio_12_relay = 12;
-
 // SETTINGS
 //setup
 const char *wlan_ssid = "VAN24";
 const char *wlan_password = "vectraPawla24";
 
-// const char *wlan_ssid = "TP-link";
-// const char *wlan_password = "tplinkpawla1";
-
-const int ledPin = 5;
-// const int ledCount = 108;
-const int ledCount = 3;
 //end of setup
 // const String serial = "12345";  //(testowy)                 // musi byc zmieniony przy kazdym urzadzeniu
 const String serial = "12349"; //(biurko)
@@ -38,18 +29,18 @@ const char *stompUrl = "/mywebsocket/websocket"; //stompowy endpoint
 // For the default config of Spring's STOMP support, the default URL is "/socketentry/websocket".
 // don't forget the leading "/" !!!
 
+int gpio_13_led = 13;
+int gpio_12_relay = 12;
+int gpio_12_button = 0;
+
 // VARIABLES
-float hue = 0.0;
-float sat = 0.0;
-int brightness = 100;
-int rgb_colors[3];
-bool received_sat = false;
-bool received_hue = false;
+int buttonState = 0;
 const char *status;
 const char *task;
 boolean is_on = false;
 boolean is_on_previous = false;
 const char *deviceType = "led_rgb";
+boolean pressed = false;
 //end of variables
 
 StaticJsonDocument<256> doc;
@@ -184,9 +175,6 @@ void setup()
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  rgb_colors[0] = 255;
-  rgb_colors[1] = 255;
-  rgb_colors[2] = 255;
   char str[12];
   // sprintf(str, "%d", WiFi.localIP());
   Serial.println(str);
@@ -199,7 +187,38 @@ void setup()
 
 void loop()
 {
+  buttonState = digitalRead(gpio_12_button);
   webSocket.loop();
+  pressed = false;
+  if (buttonState == 0)
+  {
+
+    if (is_on == true && pressed == false)
+    {
+      Serial.printf(" On");
+      digitalWrite(gpio_13_led, HIGH);
+      digitalWrite(gpio_12_relay, LOW);
+      is_on = false;
+      pressed = true;
+      status = "On";
+      String msg = "SEND\ndestination:/device/doesntExists\n\n{\"serial\":" + serial + ",\"deviceType\":\"" + deviceType + ",\"status\":\"" + status + "\"}";
+        sendMessage(msg);
+      delay(500);
+    }
+
+    if (is_on == false && pressed == false)
+    {
+      Serial.printf(" Off");
+      digitalWrite(gpio_13_led, LOW);
+      digitalWrite(gpio_12_relay, HIGH);
+      is_on = true;
+      pressed = true;
+      status = "Off";
+            String msg = "SEND\ndestination:/device/doesntExists\n\n{\"serial\":" + serial + ",\"deviceType\":\"" + deviceType + ",\"status\":\"" + status + "\"}";
+        sendMessage(msg);
+      delay(500);
+    }
+  }
 }
 
 void initialSetup(StaticJsonDocument<256> doc)
@@ -223,19 +242,19 @@ void initialSetup(StaticJsonDocument<256> doc)
 
 void prepareLedUpdate(StaticJsonDocument<256> doc)
 {
-  task = doc["task"];
   status = doc["status"];
-  Serial.write(task);
   Serial.write(status);
 
   if (0 == strcmp(status, "On"))
   {
+    is_on = true;
     digitalWrite(gpio_13_led, LOW);
     digitalWrite(gpio_12_relay, HIGH);
   }
 
   if (0 == strcmp(status, "Off"))
   {
+    is_on = false;
     digitalWrite(gpio_13_led, HIGH);
     digitalWrite(gpio_12_relay, LOW);
   }
