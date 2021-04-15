@@ -6,6 +6,10 @@
 		{
 			"name": "sonoff",
 			"path": ".."
+		},
+		{
+			"name": "wemos-temp",
+			"path": "../../wemos-temp"
 		}
 	],
 	"settings": {

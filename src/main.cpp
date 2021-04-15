@@ -20,7 +20,7 @@ const char *wlan_password = "vectraPawla24";
 // const String serial = "12345";  //(testowy)                 // musi byc zmieniony przy kazdym urzadzeniu
 const String serial = "12349"; //(biurko)
 // const char *ws_host = "192.168.0.21";           //adres serwera
-const char *ws_host = "192.168.0.21";
+const char *ws_host = "192.168.0.11";
 const int ws_port = 9999;                        //port serwera
 const char *stompUrl = "/mywebsocket/websocket"; //stompowy endpoint
 //end of setup
@@ -201,8 +201,8 @@ void loop()
       is_on = false;
       pressed = true;
       status = "On";
-      String msg = "SEND\ndestination:/device/doesntExists\n\n{\"serial\":" + serial + ",\"deviceType\":\"" + deviceType + ",\"status\":\"" + status + "\"}";
-        sendMessage(msg);
+      String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"status\":" + status + "\"}";
+      sendMessage(msg);
       delay(500);
     }
 
@@ -214,8 +214,8 @@ void loop()
       is_on = true;
       pressed = true;
       status = "Off";
-            String msg = "SEND\ndestination:/device/doesntExists\n\n{\"serial\":" + serial + ",\"deviceType\":\"" + deviceType + ",\"status\":\"" + status + "\"}";
-        sendMessage(msg);
+      String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"status\":" + status + "\"}";
+      sendMessage(msg);
       delay(500);
     }
   }
