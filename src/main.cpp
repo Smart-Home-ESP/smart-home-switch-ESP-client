@@ -5,29 +5,100 @@
 #include <WebSocketsClient.h>
 #include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
+#include <ESPAsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <EEPROM.h>
+#include <Hash.h>
+#include <FS.h>
+
+
+AsyncWebServer server(80);
+
+const char* PARAM_INPUT_1 = "input1";
+const char* PARAM_INPUT_2 = "input2";
+const char* PARAM_INPUT_3 = "input3";
+const char* PARAM_INPUT_4 = "input4";
+const char* PARAM_INPUT_5 = "input5";
+const char* PARAM_INPUT_RESTART = "restart";
+
+void notFound(AsyncWebServerRequest *request) {
+  request->send(404, "text/plain", "Not found");
+}
+
+String readFile(fs::FS &fs, const char * path){
+  Serial.printf("Reading file: %s\r\n", path);
+  File file = fs.open(path, "r");
+  if(!file || file.isDirectory()){
+    Serial.println("- empty file or failed to open file");
+    return String();
+  }
+  Serial.println("- read from file:");
+  String fileContent;
+  while(file.available()){
+    fileContent+=String((char)file.read());
+  }
+  Serial.println(fileContent);
+  return fileContent;
+}
+
+void writeFile(fs::FS &fs, const char * path, const char * message){
+  Serial.printf("Writing file: %s\r\n", path);
+  File file = fs.open(path, "w");
+  if(!file){
+    Serial.println("- failed to open file for writing");
+    return;
+  }
+  if(file.print(message)){
+    Serial.println("- file written");
+  } else {
+    Serial.println("- write failed");
+  }
+}
+
+String processor(const String& var){
+  //Serial.println(var);
+  if(var == "input1"){
+    return readFile(SPIFFS, "/inputString.txt");
+  }
+  else if(var == "inputInt"){
+    return readFile(SPIFFS, "/inputInt.txt");
+  }
+  else if(var == "inputFloat"){
+    return readFile(SPIFFS, "/inputFloat.txt");
+  }
+  return String();
+}
 
 // Replace with your network credentials
-const char *ssid = "van24";
-const char *password = "ruterPawla24";
-const String serial = "72340"; //(biurko)
-String ws_host = "192.168.1.214";
-const int ws_port = 9999;                        //port serwera
-const char *stompUrl = "/mywebsocket/websocket"; //stompowy endpoint
+String ssid;
+String password;
+String serial; 
+String ws_host;
+String stompUrl; //stompowy endpoint
+//file names
+const char *ssid_file = "/ssid_file.txt";
+const char *password_file = "/password_file.txt";
+const char *serial_file = "/serial_file.txt"; //(biurko)
+const char *ws_host_file = "/ws_host_file.txt";
+const char *stompUrl_file = "/stompUrl.txt";
+int ws_port = 9999;                        //port serwera
+
 //end of setup
 
 int gpio_13_led = 13;
 int gpio_12_relay = 12;
-int gpio_12_button = 0;
-int gpio_s2_button = 4;
+int gpio_12_button = 0; 
+int gpio_s2_button = 4; //4
 
 // VARIABLES
+float time_ap = 1;
 int buttonState = 0;
 int buttonState2 = 0;
 const char *status;
 const char *task;
 boolean is_on = false;
 boolean is_on_previous = false;
-const char *deviceType = "led_rgb";
+const char *deviceType = "switch";
 boolean pressed = false;
 //end of variables
 
@@ -37,7 +108,49 @@ WebSocketsClient webSocket;
 // FUNCTIONS
 void prepareLedUpdate(StaticJsonDocument<256> doc);
 void initialSetup(StaticJsonDocument<256> doc);
+void ApSetup();
+void spiffsSetup();
+void serverSetup();
 // END OF FUNCTIONS
+
+// HTML web page to handle 3 input fields (input1, input2, input3)
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML><html><head>
+  <title>ESP Input Form</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head><body>
+<form action="/get" target="hidden-form">
+  ssid (current value %ssid%): <input type="text" name="input1">
+  <input type="submit" value="Submit" onclick="submitMessage()">
+</form><br>
+<form action="/get" target="hidden-form">
+  password (current value %password%): <input type="text" name="input2">
+  <input type="submit" value="Submit" onclick="submitMessage()">
+</form><br>
+<form action="/get" target="hidden-form">
+  serial (current value %serial%): <input type="text" name="input3">
+  <input type="submit" value="Submit" onclick="submitMessage()">
+</form><br>
+<form action="/get" target="hidden-form">
+  ws_host (current value %ws_host%): <input type="text" name="input4">
+  <input type="submit" value="Submit" onclick="submitMessage()">
+</form><br>
+<form action="/get" target="hidden-form">
+  stomp url (current value %stompUrl%): <input type="text" name="input5">
+  <input type="submit" value="Submit" onclick="submitMessage()">
+</form><br>
+<form action="/get" target="hidden-form">
+  <input type="text" name="restart">
+  <input type="submit" value="Restart" onclick="submitMessage()">
+</form><br>
+</body>
+<script>
+  function submitMessage() {
+    alert("Saved value to ESP SPIFFS");
+    setTimeout(function(){ document.location.reload(false); }, 500);
+  }
+</script>
+</html>)rawliteral";
 
 void sendMessage(String &msg)
 {
@@ -108,18 +221,23 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 
 void setup()
 {
+  Serial.begin(115200);
+  delay(5000);
+  spiffsSetup();
+  serverSetup();
   //  Init
   pinMode(gpio_13_led, OUTPUT);
   digitalWrite(gpio_13_led, HIGH);
+  pressed = false;
 
   pinMode(gpio_12_relay, OUTPUT);
-  digitalWrite(gpio_12_relay, HIGH);
+  digitalWrite(gpio_12_relay, LOW);
 
-  Serial.begin(115200);
-  delay(5000);
 
   WiFi.begin(ssid, password);
   Serial.println("Connecting to wifi..");
+
+
 
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED)
@@ -131,6 +249,12 @@ void setup()
     Serial.println(WiFi.status());
     digitalWrite(gpio_13_led, HIGH);
     delay(500);
+    time_ap = time_ap +1;
+    if(time_ap == 60){
+      Serial.println("AP START");
+        ApSetup();
+        
+    }
   }
 
   Serial.println("");
@@ -143,6 +267,103 @@ void setup()
   // connect to websocket
   webSocket.begin(ws_host, ws_port, stompUrl);
   webSocket.onEvent(webSocketEvent);
+
+
+}
+
+void spiffsSetup() {
+  SPIFFS.begin();
+  if(readFile(SPIFFS, ssid_file) == NULL) {
+      writeFile(SPIFFS, ssid_file, "van24");
+  } else {
+      ssid = readFile(SPIFFS, ssid_file);
+  }
+    if(readFile(SPIFFS, password_file) == NULL) {
+      writeFile(SPIFFS, password_file, "ruterPawla24");
+  } else {
+      password = readFile(SPIFFS, password_file);
+  }
+    if(readFile(SPIFFS, serial_file) == NULL) {
+      writeFile(SPIFFS, serial_file, "55551");
+  } else {
+      serial = readFile(SPIFFS, serial_file);
+  }
+    if(readFile(SPIFFS, ws_host_file) == NULL) {
+      writeFile(SPIFFS, ws_host_file, "192.168.1.214");
+  } else {
+      ws_host = readFile(SPIFFS, ws_host_file);
+  }
+    if(readFile(SPIFFS, stompUrl_file) == NULL) {
+      writeFile(SPIFFS, stompUrl_file, "/mywebsocket/websocket");
+  } else {
+      stompUrl = readFile(SPIFFS, stompUrl_file);
+  }
+
+
+  Serial.println(ssid);
+}
+
+void ApSetup() {
+      Serial.print("Setting soft-AP ... ");
+  boolean result = WiFi.softAP("mini2_AP", "password");
+  if(result == true)
+  {
+    Serial.println("Ready");
+  }
+  else
+  {
+    Serial.println("Failed!");
+  }
+}
+
+void serverSetup(){
+      // Send web page with input fields to client
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/html", index_html, processor);
+  });
+
+  // Send a GET request to <ESP_IP>/get?input1=<inputMessage>
+  server.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    String inputMessage;
+    String inputParam;
+    // GET input1 value on <ESP_IP>/get?input1=<inputMessage>
+    if (request->hasParam(PARAM_INPUT_1)) {
+      inputMessage = request->getParam(PARAM_INPUT_1)->value();
+      writeFile(SPIFFS, ssid_file, inputMessage.c_str());
+    }
+    // GET input2 value on <ESP_IP>/get?input2=<inputMessage>
+    else if (request->hasParam(PARAM_INPUT_2)) {
+      inputMessage = request->getParam(PARAM_INPUT_1)->value();
+      writeFile(SPIFFS, password_file, inputMessage.c_str());
+    }
+    // GET input3 value on <ESP_IP>/get?input3=<inputMessage>
+    else if (request->hasParam(PARAM_INPUT_3)) {
+      inputMessage = request->getParam(PARAM_INPUT_1)->value();
+      writeFile(SPIFFS, serial_file, inputMessage.c_str());
+    }
+    else if (request->hasParam(PARAM_INPUT_4)) {
+      inputMessage = request->getParam(PARAM_INPUT_4)->value();
+      writeFile(SPIFFS, ws_host_file, inputMessage.c_str());
+    }
+    else if (request->hasParam(PARAM_INPUT_5)) {
+      inputMessage = request->getParam(PARAM_INPUT_5)->value();
+      writeFile(SPIFFS, stompUrl_file, inputMessage.c_str());
+    }
+    else if (request->hasParam(PARAM_INPUT_RESTART)) {
+        ESP.restart();
+    }
+    else {
+      inputMessage = "No message sent";
+      inputParam = "none";
+    }
+
+    Serial.println(inputMessage);
+    request->send(200, "text/html", "HTTP GET request sent to your ESP on input field (" 
+                                     + inputParam + ") with value: " + inputMessage +
+                                     "<br><a href=\"/\">Return to Home Page</a>");
+  });
+  server.onNotFound(notFound);
+  server.begin();
 }
 
 void loop()
@@ -150,10 +371,9 @@ void loop()
   buttonState = digitalRead(gpio_12_button);
   buttonState2 = digitalRead(gpio_s2_button);
   webSocket.loop();
-  pressed = false;
-  if (buttonState == 0 || buttonState2 == 0)
+                     
+  if (buttonState2 == 0)
   {
-
     if (is_on == true && pressed == false)
     {
       Serial.printf(" On");
@@ -180,6 +400,15 @@ void loop()
       delay(500);
     }
   }
+
+    if (buttonState2 == 1 && pressed== true) {
+        pressed = false;
+              delay(500);
+    }
+//     String yourInputString = readFile(SPIFFS, "/inputString.txt");
+
+// Serial.println(yourInputString);
+// delay(500);
 }
 
 void initialSetup(StaticJsonDocument<256> doc)
