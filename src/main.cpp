@@ -382,7 +382,7 @@ void loop()
         is_on = false;
         pressed = true;
         status = "On";
-        String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"status\":" + status + "\"}";
+        String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"deviceStatus\":\"" + status + "\"}";
         sendMessage(msg);
         delay(200);
       }
@@ -395,7 +395,7 @@ void loop()
         is_on = true;
         pressed = true;
         status = "Off";
-        String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"status\":" + status + "\"}";
+        String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"deviceStatus\":\"" + status + "\"}";
         sendMessage(msg);
         delay(200);
       }
@@ -429,7 +429,7 @@ void loop()
           is_on = false;
           pressed = true;
           status = "On";
-          String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"status\":" + status + "\"}";
+          String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"deviceStatus\":\"" + status + "\"}";
           sendMessage(msg);
           delay(200);
         }
@@ -442,7 +442,7 @@ void loop()
           is_on = true;
           pressed = true;
           status = "Off";
-          String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"status\":" + status + "\"}";
+          String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"deviceStatus\":\"" + status + "\"}";
           sendMessage(msg);
           delay(200);
         }
