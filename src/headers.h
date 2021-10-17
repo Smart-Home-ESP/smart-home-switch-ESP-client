@@ -2,14 +2,10 @@
 #define HEADER_H
 
 #include <Arduino.h>
-#include <Hash.h>
 
 #include <ESP8266WiFi.h>
 #include <WebSocketsClient.h>
 #include <ArduinoJson.h>
-#include <ESPAsyncTCP.h>
-#include <EEPROM.h>
-#include <Hash.h>
 #include <FS.h>
 #include <ArduinoOTA.h>
 #include "websocket/websocket.h"
