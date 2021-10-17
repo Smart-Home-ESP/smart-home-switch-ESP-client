@@ -2,19 +2,16 @@
 #define HEADER_H
 
 #include <Arduino.h>
-
 #include <ESP8266WiFi.h>
 #include <WebSocketsClient.h>
 #include <ArduinoJson.h>
 #include <FS.h>
 #include <ArduinoOTA.h>
-#include "websocket/websocket.h"
+
 #include "accesPoint/accesPoint.h"
 #include "ota/ota.h"
 #include "spiff/spiff.h"
 #include "server/httpServer.h"
-
-WebSocketsClient webSocket;
 
 // Replace with your network credentials
 String ssid;
@@ -54,6 +51,6 @@ boolean pressed = false;
 //end of variables
 
 StaticJsonDocument<256> doc;
-WebSocketsClient websocket;
+WebSocketsClient webSocket;
 
 #endif

@@ -1,10 +1,13 @@
 #include "headers.h"
 
+
+
 // FUNCTIONS
 void prepareLedUpdate(StaticJsonDocument<256> doc);
 void initialSetup(StaticJsonDocument<256> doc);
 void spiffsSetup();
 void webSocketEvent(WStype_t type, uint8_t *payload, size_t length);
+void sendMessage(String &msg);
 // END OF FUNCTIONS
 
 void setup()
@@ -243,6 +246,11 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
     break;
   }
 }
+
+void sendMessage(String &msg)
+{
+  webSocket.sendTXT(msg.c_str(), msg.length() + 1);
+};
 
 void spiffsSetup()
 {
