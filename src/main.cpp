@@ -82,18 +82,20 @@ const char *serial_file = "/serial_file.txt"; //(biurko)
 const char *ws_host_file = "/ws_host_file.txt";
 const char *stompUrl_file = "/stompUrl.txt";
 int ws_port = 9999;                        //port serwera
-
+int pole = 1; //switch pole type
 //end of setup
 
 int gpio_13_led = 13;
 int gpio_12_relay = 12;
 int gpio_12_button = 0; 
-int gpio_s2_button = 4; //4
+int gpio_s2_button = 0; //4
 
 // VARIABLES
 float time_ap = 1;
 int buttonState = 0;
 int buttonState2 = 0;
+int lastState = 1;
+boolean currentStateFlag = true;
 const char *status;
 const char *task;
 boolean is_on = false;
@@ -274,12 +276,12 @@ void setup()
 void spiffsSetup() {
   SPIFFS.begin();
   if(readFile(SPIFFS, ssid_file) == NULL) {
-      writeFile(SPIFFS, ssid_file, "van24");
+      writeFile(SPIFFS, ssid_file, "wifi");
   } else {
       ssid = readFile(SPIFFS, ssid_file);
   }
     if(readFile(SPIFFS, password_file) == NULL) {
-      writeFile(SPIFFS, password_file, "ruterPawla24");
+      writeFile(SPIFFS, password_file, "0987654321");
   } else {
       password = readFile(SPIFFS, password_file);
   }
@@ -368,47 +370,83 @@ void serverSetup(){
 
 void loop()
 {
-  buttonState = digitalRead(gpio_12_button);
   buttonState2 = digitalRead(gpio_s2_button);
   webSocket.loop();
-                     
-  if (buttonState2 == 0)
-  {
-    if (is_on == true && pressed == false)
-    {
-      Serial.printf(" On");
-      digitalWrite(gpio_13_led, HIGH);
-      digitalWrite(gpio_12_relay, LOW);
-      is_on = false;
-      pressed = true;
-      status = "On";
-      String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"status\":" + status + "\"}";
-      sendMessage(msg);
-      delay(500);
-    }
+  if (pole == 1) {                   
+    if (buttonState2 == 0){
+      if (is_on == true && pressed == false)
+      {
+        Serial.printf(" On");
+        digitalWrite(gpio_13_led, HIGH);
+        digitalWrite(gpio_12_relay, LOW);
+        is_on = false;
+        pressed = true;
+        status = "On";
+        String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"status\":" + status + "\"}";
+        sendMessage(msg);
+        delay(200);
+      }
 
-    if (is_on == false && pressed == false)
-    {
-      Serial.printf(" Off");
-      digitalWrite(gpio_13_led, LOW);
-      digitalWrite(gpio_12_relay, HIGH);
-      is_on = true;
-      pressed = true;
-      status = "Off";
-      String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"status\":" + status + "\"}";
-      sendMessage(msg);
-      delay(500);
-    }
+      if (is_on == false && pressed == false)
+      {
+        Serial.printf(" Off");
+        digitalWrite(gpio_13_led, LOW);
+        digitalWrite(gpio_12_relay, HIGH);
+        is_on = true;
+        pressed = true;
+        status = "Off";
+        String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"status\":" + status + "\"}";
+        sendMessage(msg);
+        delay(200);
+      }
   }
 
     if (buttonState2 == 1 && pressed== true) {
         pressed = false;
-              delay(500);
+              delay(100);
     }
-//     String yourInputString = readFile(SPIFFS, "/inputString.txt");
+  } 
+  //pole 2
+  if (pole == 2) {
+    delay(200);
 
-// Serial.println(yourInputString);
-// delay(500);
+    if (lastState == buttonState2 && buttonState2 == 1){
+          Serial.println("first");
+      lastState = 0;
+      pressed = false;
+    }
+    if (lastState == buttonState2 && buttonState2 == 0){
+                    Serial.println("second");
+      lastState = 1;
+      pressed = false;
+    }
+
+        if (is_on == true && pressed == false)
+        {
+          Serial.printf(" On");
+          digitalWrite(gpio_13_led, HIGH);
+          digitalWrite(gpio_12_relay, LOW);
+          is_on = false;
+          pressed = true;
+          status = "On";
+          String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"status\":" + status + "\"}";
+          sendMessage(msg);
+          delay(200);
+        }
+
+        if (is_on == false && pressed == false)
+        {
+          Serial.printf(" Off");
+          digitalWrite(gpio_13_led, LOW);
+          digitalWrite(gpio_12_relay, HIGH);
+          is_on = true;
+          pressed = true;
+          status = "Off";
+          String msg = "SEND\ndestination:/device/changeDeviceStatus/" + serial + "\n\n{\"status\":" + status + "\"}";
+          sendMessage(msg);
+          delay(200);
+        }
+  }
 }
 
 void initialSetup(StaticJsonDocument<256> doc)
