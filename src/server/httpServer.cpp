@@ -1,5 +1,5 @@
 #include "httpServer.h"
-#include <ESPAsyncWebServer.h>
+
 
 AsyncWebServer server(80);
 
@@ -65,15 +65,15 @@ String processor(const String &var)
   //Serial.println(var);
   if (var == "input1")
   {
-    return readFile(SPIFFS, "/inputString.txt");
+    return readFile(LittleFS, "/inputString.txt");
   }
   else if (var == "inputInt")
   {
-    return readFile(SPIFFS, "/inputInt.txt");
+    return readFile(LittleFS, "/inputInt.txt");
   }
   else if (var == "inputFloat")
   {
-    return readFile(SPIFFS, "/inputFloat.txt");
+    return readFile(LittleFS, "/inputFloat.txt");
   }
   return String();
 }
@@ -93,29 +93,29 @@ void serverSetup()
               if (request->hasParam(PARAM_INPUT_1))
               {
                 inputMessage = request->getParam(PARAM_INPUT_1)->value();
-                writeFile(SPIFFS, ssid_file_path, inputMessage.c_str());
+                writeFile(LittleFS, ssid_file_path, inputMessage.c_str());
               }
               // GET input2 value on <ESP_IP>/get?input2=<inputMessage>
               else if (request->hasParam(PARAM_INPUT_2))
               {
-                inputMessage = request->getParam(PARAM_INPUT_1)->value();
-                writeFile(SPIFFS, password_file_path, inputMessage.c_str());
+                inputMessage = request->getParam(PARAM_INPUT_2)->value();
+                writeFile(LittleFS, password_file_path, inputMessage.c_str());
               }
               // GET input3 value on <ESP_IP>/get?input3=<inputMessage>
               else if (request->hasParam(PARAM_INPUT_3))
               {
-                inputMessage = request->getParam(PARAM_INPUT_1)->value();
-                writeFile(SPIFFS, serial_file_path, inputMessage.c_str());
+                inputMessage = request->getParam(PARAM_INPUT_3)->value();
+                writeFile(LittleFS, serial_file_path, inputMessage.c_str());
               }
               else if (request->hasParam(PARAM_INPUT_4))
               {
                 inputMessage = request->getParam(PARAM_INPUT_4)->value();
-                writeFile(SPIFFS, ws_host_file_path, inputMessage.c_str());
+                writeFile(LittleFS, ws_host_file_path, inputMessage.c_str());
               }
               else if (request->hasParam(PARAM_INPUT_5))
               {
                 inputMessage = request->getParam(PARAM_INPUT_5)->value();
-                writeFile(SPIFFS, stompUrl_file_path, inputMessage.c_str());
+                writeFile(LittleFS, stompUrl_file_path, inputMessage.c_str());
               }
               else if (request->hasParam(PARAM_INPUT_RESTART))
               {
