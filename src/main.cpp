@@ -1,7 +1,5 @@
 #include "headers.h"
 
-
-
 // FUNCTIONS
 void prepareLedUpdate(StaticJsonDocument<256> doc);
 void initialSetup(StaticJsonDocument<256> doc);
@@ -254,47 +252,54 @@ void sendMessage(String &msg)
 
 void spiffsSetup()
 {
-  SPIFFS.begin();
-  if (readFile(SPIFFS, ssid_file) == NULL)
+
+  LittleFS.begin();
+  Serial.println("Start LitteFS setup");
+  if (readFile(LittleFS, ssid_file) == NULL)
   {
-    writeFile(SPIFFS, ssid_file, "wifi");
+    writeFile(LittleFS, ssid_file, "wifi");
+    ssid = readFile(LittleFS, ssid_file);
   }
   else
   {
-    ssid = readFile(SPIFFS, ssid_file);
+    ssid = readFile(LittleFS, ssid_file);
   }
-  if (readFile(SPIFFS, password_file) == NULL)
+  if (readFile(LittleFS, password_file) == NULL)
   {
-    writeFile(SPIFFS, password_file, "0987654321");
-  }
-  else
-  {
-    password = readFile(SPIFFS, password_file);
-  }
-  if (readFile(SPIFFS, serial_file) == NULL)
-  {
-    writeFile(SPIFFS, serial_file, "55551");
+    writeFile(LittleFS, password_file, "0987654321");
+    password = readFile(LittleFS, password_file);
   }
   else
   {
-    serial = readFile(SPIFFS, serial_file);
+    password = readFile(LittleFS, password_file);
   }
-  if (readFile(SPIFFS, ws_host_file) == NULL)
+  if (readFile(LittleFS, serial_file) == NULL)
   {
-    writeFile(SPIFFS, ws_host_file, "192.168.1.214");
-  }
-  else
-  {
-    ws_host = readFile(SPIFFS, ws_host_file);
-  }
-  if (readFile(SPIFFS, stompUrl_file) == NULL)
-  {
-    writeFile(SPIFFS, stompUrl_file, "/mywebsocket/websocket");
+    writeFile(LittleFS, serial_file, "55551");
+    serial = readFile(LittleFS, serial_file);
   }
   else
   {
-    stompUrl = readFile(SPIFFS, stompUrl_file);
+    serial = readFile(LittleFS, serial_file);
+  }
+  if (readFile(LittleFS, ws_host_file) == NULL)
+  {
+    writeFile(LittleFS, ws_host_file, "192.168.1.214");
+    ws_host = readFile(LittleFS, ws_host_file);
+  }
+  else
+  {
+    ws_host = readFile(LittleFS, ws_host_file);
+  }
+  if (readFile(LittleFS, stompUrl_file) == NULL)
+  {
+    writeFile(LittleFS, stompUrl_file, "/mywebsocket/websocket");
+    stompUrl = readFile(LittleFS, stompUrl_file);
+  }
+  else
+  {
+    stompUrl = readFile(LittleFS, stompUrl_file);
   }
 
-  Serial.println(ssid);
+  Serial.println("End LitteFS setup");
 }
