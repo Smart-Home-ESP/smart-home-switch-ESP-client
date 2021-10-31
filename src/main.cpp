@@ -4,6 +4,7 @@
 void prepareLedUpdate(StaticJsonDocument<256> doc);
 void initialSetup(StaticJsonDocument<256> doc);
 void spiffsSetup();
+void buttonsHandler();
 void webSocketEvent(WStype_t type, uint8_t *payload, size_t length);
 void sendMessage(String &msg);
 // END OF FUNCTIONS
@@ -36,6 +37,7 @@ void setup()
     Serial.println(WiFi.status());
     digitalWrite(gpio_led, HIGH);
     delay(500);
+     buttonsHandler();
     time_ap = time_ap + 1;
     if (time_ap == 60)
     {
@@ -58,9 +60,15 @@ void setup()
 
 void loop()
 {
-  ArduinoOTA.handle();
-  buttonState2 = digitalRead(gpio_s2_button);
   webSocket.loop();
+  ArduinoOTA.handle();
+  buttonsHandler();
+}
+
+void buttonsHandler() {
+
+  buttonState2 = digitalRead(gpio_s2_button);
+
   if (pole == 1)
   {
     if (buttonState2 == 0)
